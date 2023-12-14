@@ -1,71 +1,52 @@
-// SPDX-License-Identifier: GPL-3.0
+//SPDX-License-Identifier: GPL-3.0
 
-// Solidity version declaration
 pragma solidity >=0.5.0 <0.9.0;
-
 // ----------------------------------------------------
 // EIP-20: ERC-20 Token Standard
 // https://eips.ethereum.org/EIPS/eip-20
 // ----------------------------------------------------
 
-// Interface for the ERC-20 Token Standard
+
 interface ERC20Interface {
-    // Returns the total supply of tokens
     function totalSupply() external view returns (uint);
-
-    // Returns the balance of tokens for a given address
     function balanceOf(address tokenOwner) external view returns (uint balance);
-
-    // Transfers a specified amount of tokens to the given address
     function transfer(address to, uint tokens) external returns (bool success);
 
-    // Returns the remaining allowance that a spender has to transfer tokens on behalf of a token owner
-    function allowance(address tokenOwner, address spender) external view returns (uint remaining);
 
-    // Approves a spender to transfer a specified amount of tokens on behalf of the owner
-    function approve(address spender, uint tokens) external returns (bool success);
+    function allowance(address tokenOwner,address spender) external view returns(uint remaining);
+    function approve(address spender, uint tokens)external returns(bool success);
+    function transferFrom(address from, address to, uint tokens)external returns(bool success);
 
-    // Transfers tokens from one address to another on behalf of a third-party (if approved)
-    function transferFrom(address from, address to, uint tokens) external returns (bool success);
-
-    // Events for token transfer and approval
     event Transfer(address indexed from, address indexed to, uint tokens);
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-// Implementation of the ERC-20 Token Standard
 contract Cryptos is ERC20Interface {
-    // Token details
     string public name = "Cryptos";
     string public symbol = "CRPT";
-    uint public decimals = 0; // 18 (Uncomment and set to 18 if you want to use decimals)
+    uint public decimals = 0; //18
     uint public override totalSupply;
 
-    // Address of the token founder (deployer)
     address public founder;
-
-    // Mapping to store the balances of token holders
     mapping(address => uint) public balances;
-    // Example: balances[0x1111...] = 100;
+    // balances[0x1111...] = 100;
 
-    // Mapping to store allowances for token transfers between addresses
     mapping(address => mapping(address => uint)) allowed;
-    // Example: allowed[0x111][0x222] = 100;
 
-    // Contract constructor
-    constructor() {
+    //0x111... (owner) allows 0x2222... (the spender) ---- 100 tokens
+    // allowed[0x111][0x222] = 100;
+
+    constructor(){
         totalSupply = 1000000;
         founder = msg.sender;
         balances[founder] = totalSupply;
     }
 
-    // Returns the balance of tokens for a given address
-    function balanceOf(address tokenOwner) public view override returns (uint balance) {
+    function balanceOf(address tokenOwner) public view override returns (uint balance){
         return balances[tokenOwner];
     }
 
-    // Transfers a specified amount of tokens to the given address
-    function transfer(address to, uint tokens) public override returns (bool success) {
+    function transfer(address to, uint tokens) public virtual override returns(bool success){
         require(balances[msg.sender] >= tokens);
 
         balances[to] += tokens;
@@ -75,13 +56,11 @@ contract Cryptos is ERC20Interface {
         return true;
     }
 
-    // Returns the remaining allowance that a spender has to transfer tokens on behalf of a token owner
-    function allowance(address tokenOwner, address spender) view public override returns (uint) {
+    function allowance(address tokenOwner, address spender) view public override returns(uint){
         return allowed[tokenOwner][spender];
     }
 
-    // Approves a spender to transfer a specified amount of tokens on behalf of the owner
-    function approve(address spender, uint tokens) public override returns (bool success) {
+    function approve(address spender, uint tokens) public override returns(bool success){
         require(balances[msg.sender] >= tokens);
         require(tokens > 0);
 
@@ -91,16 +70,105 @@ contract Cryptos is ERC20Interface {
         return true;
     }
 
-    // Transfers tokens from one address to another on behalf of a third-party (if approved)
-    function transferFrom(address from, address to, uint tokens) external override returns (bool success) {
-        require(allowed[from][msg.sender] >= tokens);
+    function transferFrom(address from, address to, uint tokens) public virtual override returns (bool success){
+        require(allowed[from][msg.semder] >= tokens);
         require(balances[from] >= tokens);
-
         balances[from] -= tokens;
         allowed[from][msg.sender] -= tokens;
         balances[to] += tokens;
-
         emit Transfer(from, to, tokens);
+        return true;
+    }
+}
+
+
+//ICO Code 
+
+
+contract CryptosICO is Cryptos {
+    address public admin;
+    address payable public deposit;
+    uint tokenPrice = 0.001 ether; // 1ETH = 1000 CRPT, 1CRPT = 0.001ETH
+    uint public hardCap = 300 ether;
+    uint public raisedAmount;
+    uint public saleStart = block.timestamp;
+    uint public saleEnd = block.timestamp + 604800; // ICO ends in one week
+    uint public tokenTradeStart = saleEnd + 604800; // Transferable in a week after sale
+    uint public maxInvestment = 5 ether;
+    uint public minInvestment = 0.1 ether;
+
+    enum State {beforeStart, running, afterEnd, halted}
+    State public icoState;
+
+    constructor(address payable _deposit){
+        deposit = _deposit;
+        admin = msg.sender;
+        icoState = State.beforeStart;
+    }
+
+    modifier onlyAdmin() {
+        require(msg.msg.sender == admin);
+        _;
+    }
+
+    function halt() public onlyAdmin{
+        icoState = State.halted;
+    }
+    function resume()public onlyAdmin{
+        icoState = State.running;
+    }
+    function changeDepositAddress(address payable newDeposit) public onlyAdmin{
+        deposit = newDeposit;
+    }
+    function getCurrentState() public view returns(state){
+        if (icoState == State.halted) {
+            return State.halted;
+        }else if(block.timestamp < saleEnd){
+            return State.beforeStart;
+        }else if(block.timestamp >= saleStart && block.timestamp <=saleEnd){
+            return State.running;
+        }else{
+            return State.afterEnd;
+        }
+    }
+
+    event Invest(address inverstor, uint value, uint tokens);
+
+    function invest() payable public returns(bool){
+        icoState = getCurrentState();
+        require(icoState == State.running);
+
+        require(msg.value >= minInvestment && msg.value <= maxInvestment);
+        raisedAmount += msg.value;
+        require(raisedAmount <= hardCap);
+
+        uint tokens = msg.value / tokenPrice;
+
+        balances[msg.sender] += tokens;
+        balances[founder] -= tokens;
+        deposit.transfer(msg.value);
+        emit Invest(msg.sender, msg.value, tokens);
+
+        return true;
+
+    }
+    receive() payable external{
+        invest();
+    }
+    function transfer(address to, uint tokens) public override returns(bool success){
+        require(block.timestamp > tokenTradeStart);
+        Cryptos.transfer(to, tokens); //same as super.transfer(to, tokens);
+        return true;
+    }
+    function transferFrom(address from, address to, uint tokens) public override returns(bool success){
+        require(block.timestamp > tokenTradeStart);
+        Cryptos.transferFrom(from, to, tokens);
+        return true;
+    }
+    function burn() public returns(bool){
+        icoState = getCurrentState();
+        require(icoState == State.afterEnd);
+        balances[founder] = 0;
         return true;
     }
 }
