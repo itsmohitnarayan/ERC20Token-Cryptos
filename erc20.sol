@@ -30,4 +30,53 @@ contract Cryptos is ERC20Interface {
     address public founder;
     mapping(address => uint) public balances;
     // balances[0x1111...] = 100;
+
+    mapping(address => mapping(address => uint)) allowed;
+
+    //0x111... (owner) allows 0x2222... (the spender) ---- 100 tokens
+    // allowed[0x111][0x222] = 100;
+
+    constructor(){
+        totalSupply = 1000000;
+        founder = msg.sender;
+        balances[founder] = totalSupply;
+    }
+
+    function balanceOf(address tokenOwner) public view override returns (uint balance){
+        return balances[tokenOwner];
+    }
+
+    function transfer(address to, uint tokens) public override returns(bool success){
+        require(balances[msg.sender] >= tokens);
+
+        balances[to] += tokens;
+        balances[msg.sender] -= tokens;
+        emit Transfer(msg.sender, to, tokens);
+
+        return true;
+    }
+
+    function allowance(address tokenOwner, address spender) view public overrride returns(uint){
+        return allowed[tokenOwner][spender];
+    }
+
+    function approve(address spender, uint tokens) public override returns(bool success){
+        require(balances[msg.sender] >= tokens);
+        require(tokens > 0);
+
+        allowed[msg.sender][spender] = tokens;
+
+        emit Approval(msg.sender, spender, tokens);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint tokens) external returns (bool success){
+        require(allowed[from][msg.semder] >= tokens);
+        require(balances[from] >= tokens);
+        balances[from] -= tokens;
+        allowed[from][msg.sender] -= tokens;
+        balances[to] += tokens;
+        emit Transfer(from, to, tokens);
+        return true;
+    }
 }
