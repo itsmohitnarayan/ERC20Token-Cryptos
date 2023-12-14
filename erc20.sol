@@ -1,52 +1,71 @@
-//SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: GPL-3.0
 
+// Solidity version declaration
 pragma solidity >=0.5.0 <0.9.0;
+
 // ----------------------------------------------------
 // EIP-20: ERC-20 Token Standard
 // https://eips.ethereum.org/EIPS/eip-20
 // ----------------------------------------------------
 
-
+// Interface for the ERC-20 Token Standard
 interface ERC20Interface {
+    // Returns the total supply of tokens
     function totalSupply() external view returns (uint);
+
+    // Returns the balance of tokens for a given address
     function balanceOf(address tokenOwner) external view returns (uint balance);
+
+    // Transfers a specified amount of tokens to the given address
     function transfer(address to, uint tokens) external returns (bool success);
 
+    // Returns the remaining allowance that a spender has to transfer tokens on behalf of a token owner
+    function allowance(address tokenOwner, address spender) external view returns (uint remaining);
 
-    function allowance(address tokenOwner,address spender) external view returns(uint remaining);
-    function approve(address spender, uint tokens)external returns(bool success);
-    function transferFrom(address from, address to, uint tokens)external returns(bool success);
+    // Approves a spender to transfer a specified amount of tokens on behalf of the owner
+    function approve(address spender, uint tokens) external returns (bool success);
 
+    // Transfers tokens from one address to another on behalf of a third-party (if approved)
+    function transferFrom(address from, address to, uint tokens) external returns (bool success);
+
+    // Events for token transfer and approval
     event Transfer(address indexed from, address indexed to, uint tokens);
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
+// Implementation of the ERC-20 Token Standard
 contract Cryptos is ERC20Interface {
+    // Token details
     string public name = "Cryptos";
     string public symbol = "CRPT";
-    uint public decimals = 0; //18
+    uint public decimals = 0; // 18 (Uncomment and set to 18 if you want to use decimals)
     uint public override totalSupply;
 
+    // Address of the token founder (deployer)
     address public founder;
+
+    // Mapping to store the balances of token holders
     mapping(address => uint) public balances;
-    // balances[0x1111...] = 100;
+    // Example: balances[0x1111...] = 100;
 
+    // Mapping to store allowances for token transfers between addresses
     mapping(address => mapping(address => uint)) allowed;
+    // Example: allowed[0x111][0x222] = 100;
 
-    //0x111... (owner) allows 0x2222... (the spender) ---- 100 tokens
-    // allowed[0x111][0x222] = 100;
-
-    constructor(){
+    // Contract constructor
+    constructor() {
         totalSupply = 1000000;
         founder = msg.sender;
         balances[founder] = totalSupply;
     }
 
-    function balanceOf(address tokenOwner) public view override returns (uint balance){
+    // Returns the balance of tokens for a given address
+    function balanceOf(address tokenOwner) public view override returns (uint balance) {
         return balances[tokenOwner];
     }
 
-    function transfer(address to, uint tokens) public override returns(bool success){
+    // Transfers a specified amount of tokens to the given address
+    function transfer(address to, uint tokens) public override returns (bool success) {
         require(balances[msg.sender] >= tokens);
 
         balances[to] += tokens;
@@ -56,11 +75,13 @@ contract Cryptos is ERC20Interface {
         return true;
     }
 
-    function allowance(address tokenOwner, address spender) view public overrride returns(uint){
+    // Returns the remaining allowance that a spender has to transfer tokens on behalf of a token owner
+    function allowance(address tokenOwner, address spender) view public override returns (uint) {
         return allowed[tokenOwner][spender];
     }
 
-    function approve(address spender, uint tokens) public override returns(bool success){
+    // Approves a spender to transfer a specified amount of tokens on behalf of the owner
+    function approve(address spender, uint tokens) public override returns (bool success) {
         require(balances[msg.sender] >= tokens);
         require(tokens > 0);
 
@@ -70,12 +91,15 @@ contract Cryptos is ERC20Interface {
         return true;
     }
 
-    function transferFrom(address from, address to, uint tokens) external returns (bool success){
-        require(allowed[from][msg.semder] >= tokens);
+    // Transfers tokens from one address to another on behalf of a third-party (if approved)
+    function transferFrom(address from, address to, uint tokens) external override returns (bool success) {
+        require(allowed[from][msg.sender] >= tokens);
         require(balances[from] >= tokens);
+
         balances[from] -= tokens;
         allowed[from][msg.sender] -= tokens;
         balances[to] += tokens;
+
         emit Transfer(from, to, tokens);
         return true;
     }
