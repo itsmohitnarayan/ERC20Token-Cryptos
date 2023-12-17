@@ -82,7 +82,7 @@ contract Cryptos is ERC20Interface {
 }
 
 
-//ICO Code 
+//ICO Coding Starts here
 
 
 contract CryptosICO is Cryptos {
