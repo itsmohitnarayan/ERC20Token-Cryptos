@@ -172,3 +172,5 @@ contract CryptosICO is Cryptos {
         return true;
     }
 }
+
+// our ERC 20 TOKEN IS READY 
