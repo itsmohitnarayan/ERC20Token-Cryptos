@@ -47,7 +47,7 @@ This smart contract is licensed under the GNU General Public License v3.0. Pleas
 
 ## Contributors
 
-- [Your Name]
+- Kumar Mohit
 
 ## Disclaimer
 
